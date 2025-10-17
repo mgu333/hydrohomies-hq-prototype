@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hydrohomies HQ — Prototype</title>
+  <meta name="description" content="Hydrohomies HQ — charity: water game prototype. Catch good drops, avoid hazards, and hit the goal before time runs out." />
+  <meta property="og:title" content="Hydrohomies HQ — Prototype" />
+  <meta property="og:description" content="Catch good drops, avoid hazards, and help charity: water in this prototype." />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <a class="logo" href="/" aria-label="Hydrohomies HQ home"><span class="logo-mark" aria-hidden="true">HH</span><span class="logo-text">Hydrohomies HQ</span></a>
+    </div>
+    <div class="hud">
+      <div class="hud-item">Score: <strong id="score" aria-live="polite">0</strong></div>
+      <div class="hud-item">High: <strong id="highscore">0</strong></div>
+      <div class="hud-item">Time: <strong id="timer">30</strong>s</div>
+      <button id="pauseBtn" class="btn" aria-pressed="false">Pause</button>
+      <button id="resetBtn" class="btn">Reset</button>
+      <button id="muteBtn" class="btn" aria-pressed="false">Mute</button>
+    </div>
+  </header>
+
+  <main id="game" aria-label="Game area" tabindex="0"></main>
+
+  <div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
+
+  <script src="/script.js/script.js"></script>
+</body>
+</html>

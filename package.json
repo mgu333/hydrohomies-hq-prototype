@@ -1,0 +1,13 @@
+{
+  "name": "hydrohomies-hq-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test:playwright": "npx playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.39.0",
+    "prettier": "^2.8.0"
+  }
+}
