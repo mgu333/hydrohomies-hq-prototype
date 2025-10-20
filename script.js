@@ -19,9 +19,10 @@ let gameState = 'running'; // running, paused, finished
 highEl.textContent = highscore;
 
 const CONFIG = {
+  // defaults (Normal)
   sessionSeconds: 30,
   goalScore: 25,
-  initialSpawnMs: 900,
+  initialSpawnMs: 600,
   minSpawnMs: 250,
   spawnRampRate: 0.98, // multiplies spawn interval every Xms
   spawnRampIntervalMs: 5000,
@@ -37,6 +38,65 @@ let spawnInterval = CONFIG.initialSpawnMs;
 let lastSpawn = 0;
 let lastRamp = 0;
 let rafId = null;
+
+// Difficulty modes
+const MODES = {
+  Easy: { sessionSeconds: 45, goalScore: 15, initialSpawnMs: 800 },
+  Normal: { sessionSeconds: 30, goalScore: 25, initialSpawnMs: 600 },
+  Hard: { sessionSeconds: 25, goalScore: 35, initialSpawnMs: 420 },
+};
+let currentMode = localStorage.getItem('hh_mode') || 'Normal';
+
+// Milestones
+const MILESTONES = [5, 10, 15, 20, 25, 30, 35];
+const MESSAGES = [
+  'Every drop counts!',
+  'Clean water is life.',
+  'Communities thrive with access.',
+  'Small actions, big impact.',
+  'Thank you for caring!',
+  'You are making waves!',
+  'Keep it up — share the love!'
+];
+let seenMilestones = new Set();
+
+// Audio: lightweight WebAudio synth (no external files)
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+let activeVoices = 0;
+const MAX_VOICES = 4;
+
+function ensureAudio() {
+  if (!audioCtx && AudioCtx) audioCtx = new AudioCtx();
+}
+
+function playTone(freq, duration = 0.08, type = 'sine') {
+  if (muted) return;
+  if (!AudioCtx) return; // not supported
+  ensureAudio();
+  if (activeVoices >= MAX_VOICES) return;
+  activeVoices++;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = type;
+  o.frequency.value = freq;
+  g.gain.value = 0.0001;
+  o.connect(g);
+  g.connect(audioCtx.destination);
+  const now = audioCtx.currentTime;
+  g.gain.setValueAtTime(0.0001, now);
+  g.gain.exponentialRampToValueAtTime(0.12, now + 0.01);
+  o.start(now);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  o.stop(now + duration + 0.02);
+  o.onended = () => { activeVoices = Math.max(0, activeVoices - 1); };
+}
+
+function playChord(notes = [440,660,880], dur = 0.12) {
+  if (muted) return;
+  ensureAudio();
+  notes.forEach((n, i) => setTimeout(() => playTone(n, dur, 'sine'), i * 80));
+}
 
 // Audio
 const audio = {
@@ -77,7 +137,15 @@ function updateScore(delta) {
   if (score < -999) score = -999; // clamp
   scoreEl.textContent = score;
   // announce via aria-live already set on score
+  // confetti every 10 points
   if (score > 0 && score % 10 === 0) triggerConfetti();
+  // milestone check
+  if (MILESTONES.includes(score) && !seenMilestones.has(score)) {
+    seenMilestones.add(score);
+    const msg = MESSAGES[Math.min(MESSAGES.length - 1, MILESTONES.indexOf(score))] || 'Milestone!';
+    // respects prefers-reduced-motion via CSS
+    announce(msg, 2000);
+  }
   if (score > highscore) {
     highscore = score;
     localStorage.setItem('hh_high', String(highscore));
@@ -115,20 +183,31 @@ function createDrop(type) {
     };
   }catch(e){}
 
-  // click or touch
+  // click or touch with micro-animation and SFX
   d.addEventListener('click', (e) => {
     e.stopPropagation();
     if (gameState !== 'running') return;
-    d.remove();
+    // micro-animation: scale & rotate briefly
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      d.style.transition = 'transform 160ms ease-out';
+      d.style.transform += ' scale(1.08) rotate(8deg)';
+    }
+    setTimeout(() => {
+      // remove after micro-animation
+      d.remove();
+    }, 170);
+
     if (type === 'good') {
-      if (!muted && audio.good) audio.good.play().catch(() => {});
+      // soft ping
+      playTone(660, 0.08, 'sine');
       updateScore(CONFIG.goodPoints);
     } else if (type === 'bad') {
-      if (!muted && audio.bad) audio.bad.play().catch(() => {});
+      // lower thud
+      playTone(220, 0.12, 'sine');
       updateScore(CONFIG.badPoints);
     } else {
       // hazard
-      if (!muted && audio.bad) audio.bad.play().catch(() => {});
+      playTone(220, 0.12, 'sine');
       updateScore(CONFIG.hazardPoints);
       announce('Ouch — hazard!');
     }
@@ -198,6 +277,12 @@ function startGame() {
   stopGame();
   score = 0;
   scoreEl.textContent = score;
+  // apply current mode parameters
+  const modeCfg = MODES[currentMode] || MODES.Normal;
+  CONFIG.sessionSeconds = modeCfg.sessionSeconds;
+  CONFIG.goalScore = modeCfg.goalScore;
+  CONFIG.initialSpawnMs = modeCfg.initialSpawnMs;
+
   remaining = CONFIG.sessionSeconds;
   timerEl.textContent = remaining;
   spawnInterval = CONFIG.initialSpawnMs;
@@ -237,6 +322,8 @@ function finishGame() {
 function resetGame() {
   // clear DOM drops and confetti
   game.querySelectorAll('.drop, .confetti').forEach((n) => n.remove());
+  // clear milestones for the round
+  seenMilestones.clear();
   startGame();
 }
 
@@ -286,4 +373,32 @@ muteBtn.textContent = muted ? 'Unmute' : 'Mute';
 // touch: taps already handled by button click events on drops
 
 // start
+// wire mode selector UI
+const modeSelect = document.getElementById('modeSelect');
+const modeLabel = document.getElementById('modeLabel');
+if (modeSelect) {
+  modeSelect.value = currentMode;
+  modeLabel.textContent = currentMode;
+  modeSelect.addEventListener('change', (e) => {
+    currentMode = e.target.value;
+    localStorage.setItem('hh_mode', currentMode);
+    if (modeLabel) modeLabel.textContent = currentMode;
+    // apply immediately by resetting round
+    resetGame();
+  });
+}
+
+// play win arpeggio helper
+function playWinArpeggio() {
+  if (muted) return;
+  playChord([660, 880, 990], 0.12);
+}
+
+// update finish behavior to play arpeggio
+const origFinish = finishGame;
+finishGame = function() {
+  origFinish();
+  if (score >= CONFIG.goalScore) playWinArpeggio();
+};
+
 startGame();

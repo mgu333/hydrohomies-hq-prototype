@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test('good and bad drop score and reset', async ({ page }) => {
-  await page.goto('http://127.0.0.1:8000/index.html/index.html');
-  // ensure initial score is 0
+  await page.goto('http://127.0.0.1:8000/index.html');
+  // ensure initial score is 0 (wait for element)
+  await page.waitForSelector('#score');
   const score = await page.locator('#score');
   await expect(score).toHaveText('0');
 

@@ -19,6 +19,15 @@
       <div class="hud-item">Score: <strong id="score" aria-live="polite">0</strong></div>
       <div class="hud-item">High: <strong id="highscore">0</strong></div>
       <div class="hud-item">Time: <strong id="timer">30</strong>s</div>
+      <div class="hud-item">Mode: <span id="modeLabel">Normal</span></div>
+      <div class="hud-item">
+        <label for="modeSelect" class="visually-hidden">Difficulty</label>
+        <select id="modeSelect" aria-label="Difficulty mode">
+          <option value="Easy">Easy</option>
+          <option value="Normal" selected>Normal</option>
+          <option value="Hard">Hard</option>
+        </select>
+      </div>
       <button id="pauseBtn" class="btn" aria-pressed="false">Pause</button>
       <button id="resetBtn" class="btn">Reset</button>
       <button id="muteBtn" class="btn" aria-pressed="false">Mute</button>
@@ -30,5 +39,12 @@
   <div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
 
   <script src="./script.js"></script>
+  <footer class="site-footer" role="contentinfo">
+    <div class="footer-inner">
+      <a href="https://www.charitywater.org/" target="_blank" rel="noopener">Learn more about charity: water</a>
+      <span class="sep">·</span>
+      <a href="https://www.charitywater.org/donate" target="_blank" rel="noopener">Donate</a>
+    </div>
+  </footer>
 </body>
 </html>
